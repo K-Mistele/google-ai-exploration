@@ -6,6 +6,12 @@
 import z from 'zod'
 import {type JsonSchema7ObjectType, zodToJsonSchema} from 'zod-to-json-schema'
 import type {Content, FunctionCall, GenerationConfig, GenerativeContentBlob, Part, Tool} from '@google/generative-ai'
+import {
+    serverContentMessageSchema,
+    setupCompleteMessageSchema,
+    toolCallCancellationMessageSchema,
+    toolCallMessageSchema
+} from './server-schemas'
 
 
 /**
@@ -182,6 +188,13 @@ export const liveOutgoingMessageSchema = z.union([
     realtimeInputMessageSchema,
     toolResponseMessageSchema
 ])
+    .transform((data) => {
+        if ('setup' in data) return setupMessageSchema.parse(data);
+        if ('clientContent' in data) return clientContentMessageSchema.parse(data);
+        if ('realtimeInput' in data) return realtimeInputMessageSchema.parse(data);
+        if ('toolResponse' in data) return toolResponseMessageSchema.parse(data);
+        throw new Error('Invalid message format');
+    });
 export type LiveOutgoingMessage = z.infer<typeof liveOutgoingMessageSchema>
 export type LiveOutgoingMessageInput = z.input<typeof liveOutgoingMessageSchema>
 

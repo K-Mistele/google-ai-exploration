@@ -4,7 +4,7 @@
  * See https://ai.google.dev/api/multimodal-live#integration-guide for details.
  */
 import z, {boolean} from 'zod'
-import {partSchema} from './client-schemas.ts'
+import {partSchema} from './client-schemas'
 
 /**
  * Schemas and types for incoming messages
@@ -87,6 +87,13 @@ export const liveIncomingMessageSchema = z.union([
     serverContentMessageSchema,
     setupCompleteMessageSchema
 ])
+    .transform((data) => {
+        if ('toolCallCancellation' in data) return toolCallCancellationMessageSchema.parse(data);
+        if ('toolCall' in data) return toolCallMessageSchema.parse(data);
+        if ('serverContent' in data) return serverContentMessageSchema.parse(data);
+        if ('setupComplete' in data) return setupCompleteMessageSchema.parse(data);
+        throw new Error('Invalid message format');
+    });
 export type LiveIncomingMessage = z.infer<typeof liveIncomingMessageSchema>
 export type LiveIncomingMessageInput = z.input<typeof liveIncomingMessageSchema>
 
