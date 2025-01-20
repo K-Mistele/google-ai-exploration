@@ -9,6 +9,12 @@
 import {GoogleGenerativeAI, HarmBlockThreshold, HarmCategory} from '@google/generative-ai'
 import {GeminiFlash2MultimodalClient} from './src/client'
 import Speaker from 'speaker'
+import type {
+    ClientContentMessage,
+    ClientContentMessageInput,
+    LiveOutgoingMessageInput
+} from './src/protocol/client-schemas'
+import type {LiveIncomingMessage, LiveIncomingMessageInput} from './src/protocol/server-schemas'
 
 const speaker = new Speaker({
     channels: 1,
@@ -20,3 +26,18 @@ if (!process.env.GOOGLE_API_KEY) throw new Error(`Missing google API key!`)
 const genAi = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY)
 
 const client = new GeminiFlash2MultimodalClient()
+
+await client.ready
+console.log(`sending message`)
+await client.sendMessageToGoogle({
+    clientContent: {
+        turnComplete: true,
+        turns: [{
+            role: 'user',
+            parts: [{
+                text: 'Hello, world!'
+            }]
+        }]
+    },
+} satisfies LiveOutgoingMessageInput)
+console.log(`message sent`)

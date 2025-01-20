@@ -1,4 +1,5 @@
 import type {RawData} from 'ws'
+import z from 'zod'
 
 /**
  * Retrieves a value from process.env or throws an exception if not found.
@@ -33,8 +34,6 @@ export function parseWebsocketMessage(
     }
 }
 
-import z from 'zod'
-
 export type JSONValue =
     | null
     | string
@@ -54,3 +53,17 @@ export const jsonValueSchema: z.ZodType<JSONValue> = z.lazy(() => z.union([
 ]))
 
 export type JSONObject = {[key: string]: JSONValue}
+
+export function createResolvablePromise<T>(): {
+    promise: Promise<T>;
+    resolve: (value: T | PromiseLike<T>) => void;
+    reject: (reason?: any) => void;
+} {
+    let resolve: (value: T | PromiseLike<T>) => void;
+    let reject: (reason?: any) => void;
+    const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+    });
+    return { promise, resolve: resolve!, reject: reject! };
+}

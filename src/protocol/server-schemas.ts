@@ -81,25 +81,10 @@ export const setupCompleteMessageSchema = z.object({
 export type SetupCompleteMessage = z.infer<typeof setupCompleteMessageSchema>
 export type SetupCompleteMessageInput = z.input<typeof setupCompleteMessageSchema>
 
-export const liveIncomingMessageSchema = z.union([
-    toolCallCancellationMessageSchema,
-    toolCallMessageSchema,
-    serverContentMessageSchema,
-    setupCompleteMessageSchema
-])
-    .transform((data) => {
-        if ('toolCallCancellation' in data) return toolCallCancellationMessageSchema.parse(data);
-        if ('toolCall' in data) return toolCallMessageSchema.parse(data);
-        if ('serverContent' in data) return serverContentMessageSchema.parse(data);
-        if ('setupComplete' in data) return setupCompleteMessageSchema.parse(data);
-        throw new Error('Invalid message format');
-    });
+export const liveIncomingMessageSchema = toolCallCancellationMessageSchema
+    .or(toolCallMessageSchema)
+    .or(serverContentMessageSchema)
+    .or(setupCompleteMessageSchema)
 export type LiveIncomingMessage = z.infer<typeof liveIncomingMessageSchema>
 export type LiveIncomingMessageInput = z.input<typeof liveIncomingMessageSchema>
-
-
-
-
-
-
 
