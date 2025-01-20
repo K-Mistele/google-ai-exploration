@@ -8,19 +8,26 @@ import {
 } from './protocol/client-schemas'
 import {type RawData, WebSocket} from 'ws'
 import {createResolvablePromise, parseWebsocketMessage, requireEnvironment} from './utils'
-import {type LiveIncomingMessage, liveIncomingMessageSchema} from './protocol/server-schemas'
-import {isSetupCompleteMessage} from './protocol/type-guards'
+import {type LiveIncomingMessage, liveIncomingMessageSchema, type ServerContentMessage} from './protocol/server-schemas'
+import {isServerContentMessage, isSetupCompleteMessage} from './protocol/type-guards'
+import Speaker from 'speaker'
+import {Readable} from 'node:stream'
+
+const speaker = new Speaker({
+    bitDepth: 16,
+    channels: 1,
+    sampleRate: 24_000,
+})
 
 const GOOGLE_API_KEY = requireEnvironment(`GOOGLE_API_KEY`)
 
 
 export class GeminiFlash2MultimodalClient {
 
+    public readonly ready: Promise<boolean>
     private connectionUrl: string
     private config: LiveConfig
     private ws: WebSocket | null = null
-
-    public readonly ready: Promise<boolean>
     private resolve: (a: boolean) => void
     private reject: (e: Error) => void
 
@@ -66,6 +73,14 @@ export class GeminiFlash2MultimodalClient {
         return ws
     }
 
+    public async sendMessageToGoogle(message: LiveOutgoingMessageInput) {
+        if (!this.ws) {
+            console.error(`unable to send message as there is not a websocket yet`)
+            return
+        }
+        this.ws.send(JSON.stringify(liveOutgoingMessageSchema.parse(message)))
+    }
+
     protected async handleOutboundMessageFromGoogle(data: RawData | string, isBinary: boolean) {
         console.log(`received message:`, data.toString())
         const event = parseWebsocketMessage(data, isBinary)
@@ -76,16 +91,24 @@ export class GeminiFlash2MultimodalClient {
             console.log(`Setup complete`)
             this.resolve(true)
         }
+        else if (isServerContentMessage(message)) {
+            const a = message as ServerContentMessage
+            const b = a.serverContent
+            if ('modelTurn' in b) {
+                const c = b.modelTurn.parts[0]
+                if ('inlineData' in c) {
+
+                    const audioString = c.inlineData.data
+                    const audio = Buffer.from(audioString, 'base64')
+                    const rs = Readable.from(audio)
+                    rs.pipe(speaker, {end: false})
+
+
+                }
+            }
+        }
 
 
         // TODO process different event types
-    }
-
-    public async sendMessageToGoogle(message: LiveOutgoingMessageInput) {
-        if (!this.ws) {
-            console.error(`unable to send message as there is not a websocket yet`)
-            return
-        }
-        this.ws.send(JSON.stringify(liveOutgoingMessageSchema.parse(message)))
     }
 }
